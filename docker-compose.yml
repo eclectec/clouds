@@ -1,56 +1,56 @@
 services:
-  jobmanager:
-    image: flink:latest
-    depends_on:
-      - cloud
-    ports:
-      - "8081:8081"
-    command: jobmanager
-    networks:
-      - aware-network
-
-  taskmanager:
-    image: flink:latest
-    command: taskmanager
-    depends_on:
-      - jobmanager
-    networks:
-      - aware-network
-
-  # Single Application
   # jobmanager:
   #   image: flink:latest
   #   depends_on:
   #     - cloud
   #   ports:
   #     - "8081:8081"
-  #   command: standalone-job --jars /opt/flink/usrlib/rumble.jar, --jars /opt/flink/usrlib/table-test.jar # standalone-job --job-classname com.flink.analytic.TableTest --jars /opt/flink/usrlib/table-test.jar
-  #   volumes:
-  #     - ../flink-jobs:/opt/flink/usrlib
-  #   environment:
-  #     - |
-  #       FLINK_PROPERTIES=
-  #       jobmanager.rpc.address: jobmanager
-  #       parallelism.default: 2
+  #   command: jobmanager
   #   networks:
-  #     - aware-network    
+  #     - aware-network
 
   # taskmanager:
   #   image: flink:latest
+  #   command: taskmanager
   #   depends_on:
   #     - jobmanager
-  #   command: taskmanager
-  #   scale: 1
-  #   volumes:
-  #     - ../flink-jobs:/opt/flink/usrlib
-  #   environment:
-  #     - |
-  #       FLINK_PROPERTIES=
-  #       jobmanager.rpc.address: jobmanager
-  #       taskmanager.numberOfTaskSlots: 4
-  #       parallelism.default: 4
   #   networks:
   #     - aware-network
+
+  # Single Application
+  jobmanager:
+    image: flink:latest
+    depends_on:
+      - cloud
+    ports:
+      - "8081:8081"
+    command: standalone-job --job-classname com.flink.analytic.Main --jars /opt/flink/usrlib/rumble.jar
+    volumes:
+      - ./:/opt/flink/usrlib
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        parallelism.default: 2
+    networks:
+      - aware-network    
+
+  taskmanager:
+    image: flink:latest
+    depends_on:
+      - jobmanager
+    command: taskmanager
+    scale: 1
+    volumes:
+      - ./:/opt/flink/usrlib
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 4
+        parallelism.default: 4
+    networks:
+      - aware-network
     
   # sql-client:
   #   build: ../flink/sql-client/.
@@ -97,10 +97,11 @@ services:
     depends_on:
       - zookeeper
     environment:
-      BROKER: kafka
-      PORT: 9093
-      TOPIC: traffic
-      URL: https://api.airplanes.live/v2/point/36.1716/-115.1391/200
+      BROKER: redis
+      PORT: 6379
+      TOPIC: rumble
+      #URL: https://api.airplanes.live/v2/point/36.1716/-115.1391/200
+      URL: https://adsbexchange.com/api/aircraft/json/lat/34/lon/-119/dist/500/
     networks:
       - aware-network
   
@@ -132,14 +133,32 @@ services:
   redis:
     container_name: redis
     image: redis
+    hostname: redis
     ports:
       - 6379:6379
+    networks:
+      - aware-network
 
   runway:
     container_name: runway
     image: runway
     ports:
       - 8000:8000
+    depends_on:
+      - hangar
+    networks:
+      - aware-network
+  
+  hangar:
+    image: arangodb:latest
+    container_name: hangar
+    environment:
+      ARANGO_ROOT_PASSWORD: arango
+    ports:
+      - 8529:8529
+    volumes:
+      - ../hangar/data:/var/lib/arangodb3
+      - ../hangar/dumps:/dumps
     networks:
       - aware-network
 

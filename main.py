@@ -65,25 +65,36 @@ def main():
 
         while True:
             air_traffic = None
-            data = requests.get(url)
-            json_data = json.loads(data.text)
-            if "airplanes" in url:
-                air_traffic = json_data["ac"]
-            elif "opensky" in url:
-                air_traffic = process_opensky(json_data)
-            elif "opendata" in url:
-                air_traffic = json_data["aircraft"]
-            else:
-                air_traffic = [{
-                    "message": "hello there"
-                }]
-
-            if air_traffic:
-                for plot in air_traffic:
-                    if(message_broker == "kafka"):
-                        broker.produce(topic, json.dumps(plot), callback=delivery_report)
+            try:
+                if "adsb" in url:
+                    api_key = '6bbc780e-8511-4c86-8619-fdc0ab800ab4'
+                    headers = {'api-auth': api_key} 
+                    data = requests.get(url, headers=headers)
+                    json_data = json.loads(data.text)
+                    air_traffic = json_data["ac"]
+                else:
+                    data = requests.get(url)
+                    json_data = json.loads(data.text)
+                    if "airplanes" in url:
+                        air_traffic = json_data["ac"]
+                    elif "opensky" in url:
+                        air_traffic = process_opensky(json_data)
+                    elif "opendata" in url:
+                        air_traffic = json_data["aircraft"]
                     else:
-                        broker.publish(topic, json.dumps(plot))
+                        air_traffic = [{
+                            "message": "hello there"
+                        }]
+
+                if air_traffic:
+                    for plot in air_traffic:
+                        if(message_broker == "kafka"):
+                            broker.produce(topic, json.dumps(plot), callback=delivery_report)
+                        else:
+                            broker.publish(topic, json.dumps(plot))
+            except:
+                print(f"""An error occurred processing request to {url}""") 
+            
             time.sleep(10)
 
 if __name__ == "__main__":
