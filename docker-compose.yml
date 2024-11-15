@@ -99,7 +99,7 @@ services:
     environment:
       BROKER: redis
       PORT: 6379
-      TOPIC: rumble
+      TOPIC: traffic
       #URL: https://api.airplanes.live/v2/point/36.1716/-115.1391/200
       URL: https://adsbexchange.com/api/aircraft/json/lat/34/lon/-119/dist/500/
     networks:
